@@ -327,7 +327,8 @@ export async function POST(request: Request) {
         },
       },
     },
-    onFinish: async ({ responseMessages }) => {
+    onFinish: async (response) => {
+      const responseMessages = response.response.messages;
       if (session.user?.id) {
         try {
           const responseMessagesWithoutIncompleteToolCalls =
