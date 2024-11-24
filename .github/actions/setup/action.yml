@@ -18,7 +18,7 @@ runs:
       uses: actions/setup-node@v4
       with:
         node-version-file: .nvmrc
-        cache: 'pnpm' # Enable built-in node module caching
+        cache: 'pnpm'
 
     - name: ⚙️ Enable Corepack
       if: ${{ inputs.enable-corepack == 'true' }}
@@ -29,21 +29,21 @@ runs:
         echo "corepack enabled"
 
     - uses: pnpm/action-setup@v2.2.4
-      if: ${{ inputs.enable-corepack == 'false' }}
       with:
+        version: 8
         run_install: false
-
-    - name: Expose pnpm config(s) through "$GITHUB_OUTPUT"
-      id: pnpm-config
-      shell: bash
-      run: |
-        echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
     - name: Cache rotation keys
       id: cache-rotation
       shell: bash
       run: |
         echo "YEAR_MONTH=$(date -u '+%Y%m')" >> $GITHUB_OUTPUT
+
+    - name: Expose pnpm config(s)
+      id: pnpm-config
+      shell: bash
+      run: |
+        echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
     - uses: actions/cache@v4
       name: Setup pnpm cache
@@ -52,18 +52,6 @@ runs:
         key: ${{ runner.os }}-pnpm-store-${{ steps.cache-rotation.outputs.YEAR_MONTH }}-${{ hashFiles('**/pnpm-lock.yaml') }}
         restore-keys: |
           ${{ runner.os }}-pnpm-store-${{ steps.cache-rotation.outputs.YEAR_MONTH }}-
-
-    # Add build cache
-    - uses: actions/cache@v4
-      name: Cache build output
-      with:
-        path: |
-          .next
-          dist
-          build
-        key: ${{ runner.os }}-build-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
-        restore-keys: |
-          ${{ runner.os }}-build-
 
     - name: Install dependencies
       shell: bash
