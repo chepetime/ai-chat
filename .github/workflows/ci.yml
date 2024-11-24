@@ -46,20 +46,6 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
-      minio:
-        image: minio/minio
-        env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-        ports:
-          - 9000:9000
-        options: >-
-          --health-cmd="curl -f http://localhost:9000/minio/health/live || exit 1"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-          --command server /data
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -72,21 +58,16 @@ jobs:
 
       - name: Wait for Services
         run: |
-          echo "Waiting for PostgreSQL and MinIO to be ready..."
+          echo "Waiting for PostgreSQL to be ready..."
           for i in {1..10}; do
-            nc -z localhost 5432 && nc -z localhost 9000 && break
-            echo "Services not ready yet. Retrying in 5 seconds..."
+            nc -z localhost 5432 && break
+            echo "Service not ready yet. Retrying in 5 seconds..."
             sleep 5
           done
 
       - name: Run Build
         env:
           POSTGRES_URL: postgres://postgres:postgres@localhost:5432/ai_chatbot
-          MINIO_ENDPOINT: localhost
-          MINIO_PORT: 9000
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-          MINIO_BUCKET: my-app-bucket
         run: pnpm build
 
   notify:
