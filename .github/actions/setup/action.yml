@@ -28,35 +28,35 @@ runs:
         echo "corepack enabled"
 
     - uses: pnpm/action-setup@v2.2.4
+      if: ${{ inputs.enable-corepack == 'false' }}
       with:
-        version: 8
         run_install: false
+
+    - name: Expose pnpm config(s) through "$GITHUB_OUTPUT"
+      id: pnpm-config
+      shell: bash
+      run: |
+        echo "STORE_PATH=$(pnpm store path | tr -d '\n')" >> $GITHUB_OUTPUT
 
     - name: Cache rotation keys
       id: cache-rotation
       shell: bash
       run: |
-        echo "YEAR_MONTH=$(date -u '+%Y%m')" >> $GITHUB_OUTPUT
-
-    - name: Expose pnpm config(s)
-      id: pnpm-config
-      shell: bash
-      run: |
-        echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+        echo "YEAR_MONTH=$(/bin/date -u "+%Y%m")" >> $GITHUB_OUTPUT
 
     - uses: actions/cache@v4
       name: Setup pnpm cache
       with:
         path: ${{ steps.pnpm-config.outputs.STORE_PATH }}
-        key: ${{ runner.os }}-pnpm-store-${{ steps.cache-rotation.outputs.YEAR_MONTH }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+        key: ${{ runner.os }}-pnpm-store-cache-${{ steps.cache-rotation.outputs.YEAR_MONTH }}-${{ hashFiles('**/pnpm-lock.yaml') }}
         restore-keys: |
-          ${{ runner.os }}-pnpm-store-${{ steps.cache-rotation.outputs.YEAR_MONTH }}-
+          ${{ runner.os }}-pnpm-store-cache-${{ steps.cache-rotation.outputs.YEAR_MONTH }}-
 
     - name: Install dependencies
       shell: bash
       working-directory: ${{ inputs.cwd }}
       run: |
-        echo "//registry.npmjs.org/:always-auth=false" > .npmrc
-        pnpm install --frozen-lockfile --prefer-offline
+        npm config set registry https://registry.npmjs.org/
+        pnpm install --prefer-offline
       env:
         HUSKY: '0'
