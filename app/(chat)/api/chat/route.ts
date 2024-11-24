@@ -1,16 +1,16 @@
 import {
-  convertToCoreMessages,
-  Message,
+  type Message,
   StreamData,
+  convertToCoreMessages,
   streamObject,
   streamText,
 } from 'ai';
 import { z } from 'zod';
 
-import { customModel } from '@/ai';
-import { models } from '@/ai/models';
-import { blocksPrompt, regularPrompt, systemPrompt } from '@/ai/prompts';
 import { auth } from '@/app/(auth)/auth';
+import { customModel } from '@/lib/ai';
+import { models } from '@/lib/ai/models';
+import { systemPrompt } from '@/lib/ai/prompts';
 import {
   deleteChatById,
   getChatById,
@@ -19,8 +19,7 @@ import {
   saveDocument,
   saveMessages,
   saveSuggestions,
-} from '@/db/queries';
-import { Suggestion } from '@/db/schema';
+} from '@/lib/db/queries';
 import {
   generateUUID,
   getMostRecentUserMessage,
@@ -28,6 +27,8 @@ import {
 } from '@/lib/utils';
 
 import { generateTitleFromUserMessage } from '../../actions';
+
+import type { Suggestion } from '@/lib/db/schema';
 
 export const maxDuration = 60;
 
@@ -104,7 +105,7 @@ export async function POST(request: Request) {
         }),
         execute: async ({ latitude, longitude }) => {
           const response = await fetch(
-            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&hourly=temperature_2m&daily=sunrise,sunset&timezone=auto`
+            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&hourly=temperature_2m&daily=sunrise,sunset&timezone=auto`,
           );
 
           const weatherData = await response.json();
@@ -118,7 +119,7 @@ export async function POST(request: Request) {
         }),
         execute: async ({ title }) => {
           const id = generateUUID();
-          let draftText: string = '';
+          let draftText = '';
 
           streamingData.append({
             type: 'id',
@@ -158,7 +159,7 @@ export async function POST(request: Request) {
 
           streamingData.append({ type: 'finish', content: '' });
 
-          if (session.user && session.user.id) {
+          if (session.user?.id) {
             await saveDocument({
               id,
               title,
@@ -170,7 +171,7 @@ export async function POST(request: Request) {
           return {
             id,
             title,
-            content: `A document was created and is now visible to the user.`,
+            content: 'A document was created and is now visible to the user.',
           };
         },
       },
@@ -192,7 +193,7 @@ export async function POST(request: Request) {
           }
 
           const { content: currentContent } = document;
-          let draftText: string = '';
+          let draftText = '';
 
           streamingData.append({
             type: 'clear',
@@ -236,7 +237,7 @@ export async function POST(request: Request) {
 
           streamingData.append({ type: 'finish', content: '' });
 
-          if (session.user && session.user.id) {
+          if (session.user?.id) {
             await saveDocument({
               id,
               title: document.title,
@@ -268,7 +269,7 @@ export async function POST(request: Request) {
             };
           }
 
-          let suggestions: Array<
+          const suggestions: Array<
             Omit<Suggestion, 'userId' | 'createdAt' | 'documentCreatedAt'>
           > = [];
 
@@ -305,7 +306,7 @@ export async function POST(request: Request) {
             suggestions.push(suggestion);
           }
 
-          if (session.user && session.user.id) {
+          if (session.user?.id) {
             const userId = session.user.id;
 
             await saveSuggestions({
@@ -327,7 +328,7 @@ export async function POST(request: Request) {
       },
     },
     onFinish: async ({ responseMessages }) => {
-      if (session.user && session.user.id) {
+      if (session.user?.id) {
         try {
           const responseMessagesWithoutIncompleteToolCalls =
             sanitizeResponseMessages(responseMessages);
@@ -350,7 +351,7 @@ export async function POST(request: Request) {
                   content: message.content,
                   createdAt: new Date(),
                 };
-              }
+              },
             ),
           });
         } catch (error) {
